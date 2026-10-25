@@ -29,14 +29,6 @@
       touch-action: manipulation;
     }
   </style>
-
-  <meta name="theme-color" content="#2563eb">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen pb-20 font-sans transition-colors duration-200">
 
@@ -185,6 +177,17 @@
             </div>
           </div>
 
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Remark (optional)</label>
+            <textarea
+              id="manualRemark"
+              rows="2"
+              maxlength="500"
+              placeholder="Example: Forgot to punch out; actual duty completed at 7:30 PM."
+              class="w-full px-3 py-2 rounded-lg text-sm border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+            ></textarea>
+          </div>
+
           <!-- Instant Calculation Preview Container -->
           <div id="manualPreviewContainer" class="hidden p-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs grid grid-cols-3 gap-2 text-center">
             <div>
@@ -278,6 +281,7 @@
                 <th class="py-2 px-1">Lunch</th>
                 <th class="py-2 px-1">Actual</th>
                 <th class="py-2 px-1">Over Duty</th>
+                <th class="py-2 px-1">Remark</th>
                 <th class="py-2 px-1 text-right">Actions</th>
               </tr>
             </thead>
@@ -432,6 +436,16 @@
               class="w-full px-3 py-2 rounded-lg text-xs border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
             />
           </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">Remark (optional)</label>
+          <textarea
+            id="editRemarkInput"
+            rows="2"
+            maxlength="500"
+            placeholder="Add or update the shift remark"
+            class="w-full px-3 py-2 rounded-lg text-xs border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+          ></textarea>
         </div>
       </div>
 
@@ -744,6 +758,7 @@
       document.getElementById('manualDate').value = '';
       document.getElementById('manualInTime').value = '';
       document.getElementById('manualOutTime').value = '';
+      document.getElementById('manualRemark').value = '';
       updateManualPreview();
     }
 
@@ -752,6 +767,7 @@
       const date = document.getElementById('manualDate').value;
       const inTime = document.getElementById('manualInTime').value;
       const outTime = document.getElementById('manualOutTime').value;
+      const remark = document.getElementById('manualRemark').value.trim();
 
       if (!date || !inTime || !outTime) return;
 
@@ -768,6 +784,7 @@
         date: date,
         punchIn: punchInISO,
         punchOut: punchOutISO,
+        remark: remark,
         status: 'COMPLETED'
       });
 
@@ -775,6 +792,11 @@
       clearManualForm();
       refreshUI();
       alert('Attendance record saved successfully!');
+    }
+
+    // Safely display user-entered remarks as plain text.
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     }
 
     // DASHBOARD & LOG TABLE RENDERING
@@ -826,6 +848,7 @@
             <td class="py-2.5 px-1">${r.calc.lunchMins}m</td>
             <td class="py-2.5 px-1">${formatMinsToHM(r.calc.actualMins)}</td>
             <td class="py-2.5 px-1 font-bold text-blue-600 dark:text-blue-400">${formatMinsToHM(r.calc.overDutyMins)}</td>
+            <td class="py-2.5 px-1 whitespace-normal min-w-[140px]">${escapeHTML(r.remark || '—')}</td>
             <td class="py-2.5 px-1 text-right space-x-1">
               <button onclick="openEditModal('${r.id}')" class="p-1 text-slate-500 hover:text-blue-600 rounded">✎</button>
               <button onclick="promptDeleteRecord('${r.id}')" class="p-1 text-slate-500 hover:text-rose-600 rounded">🗑</button>
@@ -904,6 +927,7 @@
       document.getElementById('editDateInput').value = target.date;
       document.getElementById('editInTimeInput').value = inParts.time;
       document.getElementById('editOutTimeInput').value = outParts.time;
+      document.getElementById('editRemarkInput').value = target.remark || '';
 
       document.getElementById('editModal').classList.remove('hidden');
     }
@@ -918,6 +942,7 @@
       const date = document.getElementById('editDateInput').value;
       const inTime = document.getElementById('editInTimeInput').value;
       const outTime = document.getElementById('editOutTimeInput').value;
+      const remark = document.getElementById('editRemarkInput').value.trim();
 
       if (!date || !inTime || !outTime) {
         alert('All fields are required.');
@@ -934,7 +959,7 @@
 
       records = records.map(r => {
         if (r.id === recordToEditId) {
-          return { ...r, date: date, punchIn: punchInISO, punchOut: punchOutISO, status: 'COMPLETED' };
+          return { ...r, date: date, punchIn: punchInISO, punchOut: punchOutISO, remark: remark, status: 'COMPLETED' };
         }
         return r;
       });
@@ -956,7 +981,7 @@
 
       let csv = 'GRS OD Tracker - Attendance Report\n';
       csv += `Selected Month: ${selectedMonth}\n\n`;
-      csv += 'Date,Punch In,Punch Out,Elapsed Time,Lunch Deduction,Actual Working Hours,Normal Duty,Daily Over Duty\n';
+      csv += 'Date,Punch In,Punch Out,Elapsed Time,Lunch Deduction,Actual Working Hours,Normal Duty,Daily Over Duty,Remark\n';
 
       let totalActual = 0, totalLunch = 0, totalOverDuty = 0;
 
@@ -966,7 +991,8 @@
         totalLunch += calc.lunchMins;
         totalOverDuty += calc.overDutyMins;
 
-        csv += `"${r.date}","${formatTimeTo12H(r.punchIn)}","${formatTimeTo12H(r.punchOut)}","${formatMinsToHM(calc.elapsedMins)}","${calc.lunchMins}m","${formatMinsToHM(calc.actualMins)}","8h 0m","${formatMinsToHM(calc.overDutyMins)}"\n`;
+        const csvRemark = String(r.remark || '').replace(/"/g, '""');
+        csv += `"${r.date}","${formatTimeTo12H(r.punchIn)}","${formatTimeTo12H(r.punchOut)}","${formatMinsToHM(calc.elapsedMins)}","${calc.lunchMins}m","${formatMinsToHM(calc.actualMins)}","8h 0m","${formatMinsToHM(calc.overDutyMins)}","${csvRemark}"\n`;
       });
 
       csv += `\nSUMMARY TOTALS\n`;
@@ -1015,6 +1041,7 @@
           lunchMins: calc.lunchMins,
           actualMins: calc.actualMins,
           overDutyMins: calc.overDutyMins,
+          remark: r.remark || '',
           status: r.status
         };
       });
@@ -1075,15 +1102,11 @@
       document.getElementById('testModal').classList.add('hidden');
     }
   </script>
-
-  <script>
-    // Register the PWA service worker when served from HTTPS or localhost.
-    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.warn('PWA service worker registration failed:', err));
-      });
-    }
-  </script>
 </body>
 </html>
+```
 
+### How to Use This HTML File:
+1. Save the file locally on your computer or phone as `index.html`.
+2. Open it directly in Chrome, Firefox, Safari, or Samsung Internet.
+3. You can also upload it to GitHub Pages or Netlify Drop to get a live URL and install it on your mobile home screen.
