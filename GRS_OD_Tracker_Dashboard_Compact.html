@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GRS OD Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Mobile tap optimization */
+    button, input, select {
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen pb-20 font-sans transition-colors duration-200">
+
+  <!-- HEADER BAR -->
+  <header class="sticky top-0 z-40 px-4 py-3 border-b bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+          G
+        </div>
+        <div>
+          <h1 class="font-bold text-base leading-none text-slate-900 dark:text-white">GRS OD Tracker</h1>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Attendance & Overtime Engine</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          onclick="runVerificationSuite()"
+          class="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-200 transition-colors flex items-center gap-1"
+          title="Run Automated Rules Test"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          <span>Test Rules</span>
+        </button>
+        <button
+          onclick="toggleTheme()"
+          id="themeToggleBtn"
+          class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-amber-400"
+          aria-label="Toggle Theme"
+        >
+          <svg id="themeIconSun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+          <svg id="themeIconMoon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="max-w-md mx-auto px-4 pt-4 space-y-4">
+
+    <!-- TAB 1: DAILY ATTENDANCE & CLOCK IN -->
+    <div id="tab-daily" class="space-y-4">
+      <!-- Live Clock Card -->
+      <div class="p-4 rounded-2xl border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-sm text-center">
+        <p class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Live Shift Clock</p>
+        <div id="liveClockTime" class="text-3xl font-extrabold font-mono tracking-tight text-slate-900 dark:text-white">
+          --:--:-- --
+        </div>
+        <p id="liveClockDate" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Loading...
+        </p>
+      </div>
+
+      <!-- Shift Action Panel -->
+      <div class="p-5 rounded-2xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Punch Duty</span>
+          <span id="shiftStatusBadge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+            Off Duty
+          </span>
+        </div>
+
+        <!-- Punch Buttons -->
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            id="punchInBtn"
+            onclick="handlePunchIn()"
+            class="py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 active:scale-95"
+          >
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <span>Punch In</span>
+          </button>
+
+          <button
+            id="punchOutBtn"
+            onclick="handlePunchOut()"
+            disabled
+            class="py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-slate-100 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>Punch Out</span>
+          </button>
+        </div>
+
+        <!-- Active Shift Details Container -->
+        <div id="activeShiftNotice" class="hidden mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-xs space-y-1">
+          <div class="flex justify-between font-medium text-amber-900 dark:text-amber-200">
+            <span>Started:</span>
+            <span id="activeShiftStartedText">--</span>
+          </div>
+          <p class="text-amber-700 dark:text-amber-400 text-[11px]">
+            Overtime calculation will trigger automatically when you Punch Out.
+          </p>
+        </div>
+      </div>
+
+      <!-- Manual Attendance Entry Card -->
+      <div class="p-5 rounded-2xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="font-semibold text-sm text-slate-900 dark:text-white">Manual / Forgotten Shift Entry</h2>
+          </div>
+          <button
+            type="button"
+            onclick="clearManualForm()"
+            class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+          >
+            Clear All
+          </button>
+        </div>
+
+        <form id="manualEntryForm" onsubmit="handleSaveManualEntry(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Attendance Date</label>
+            <input
+              type="date"
+              id="manualDate"
+              oninput="updateManualPreview()"
+              class="w-full px-3 py-2 rounded-lg text-sm border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+              required
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Punch In Time</label>
+              <input
+                type="time"
+                id="manualInTime"
+                oninput="updateManualPreview()"
+                class="w-full px-3 py-2 rounded-lg text-sm border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Punch Out Time</label>
+              <input
+                type="time"
+                id="manualOutTime"
+                oninput="updateManualPreview()"
+                class="w-full px-3 py-2 rounded-lg text-sm border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Remark (optional)</label>
+            <textarea
+              id="manualRemark"
+              rows="2"
+              maxlength="500"
+              placeholder="Example: Forgot to punch out; actual duty completed at 7:30 PM."
+              class="w-full px-3 py-2 rounded-lg text-sm border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+            ></textarea>
+          </div>
+
+          <!-- Instant Calculation Preview Container -->
+          <div id="manualPreviewContainer" class="hidden p-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs grid grid-cols-3 gap-2 text-center">
+            <div>
+              <span class="block text-[10px] text-slate-500">Elapsed</span>
+              <span id="prevElapsed" class="font-semibold text-slate-800 dark:text-slate-200">0h 0m</span>
+            </div>
+            <div>
+              <span class="block text-[10px] text-slate-500">Lunch</span>
+              <span id="prevLunch" class="font-semibold text-slate-800 dark:text-slate-200">0m</span>
+            </div>
+            <div>
+              <span class="block text-[10px] text-slate-500">Over Duty</span>
+              <span id="prevOverDuty" class="font-bold text-blue-600 dark:text-blue-400">0h 0m</span>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="saveManualBtn"
+            disabled
+            class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium text-sm rounded-xl transition-all shadow-sm"
+          >
+            Save Attendance Entry
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- TAB 2: MONTHLY DASHBOARD & LOGS -->
+    <div id="tab-dashboard" class="hidden space-y-4">
+      <!-- Month Selector Header -->
+      <div class="p-4 rounded-2xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+        <span class="text-xs font-semibold text-slate-500">Select Month</span>
+        <input
+          type="month"
+          id="dashboardMonthPicker"
+          onchange="renderDashboardView()"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+        />
+      </div>
+
+      <!-- Prominent Monthly Overtime Banner Card -->
+      <div class="p-5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg space-y-2 relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+          <svg class="w-32 h-32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <p class="text-xs uppercase font-bold tracking-wider text-blue-100">Total Monthly Over Duty</p>
+        <div id="dashTotalOverDuty" class="text-4xl font-extrabold font-mono tracking-tight">
+          0h 0m
+        </div>
+        <p id="dashBannerSubtitle" class="text-xs text-blue-100">
+          Accumulated overtime beyond 8 hours/day for 0 completed shift(s).
+        </p>
+      </div>
+
+      <!-- Summary Metrics Grid -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3.5 rounded-xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-[11px] text-slate-500 block mb-1">Attended Days</span>
+          <span id="dashTotalDays" class="text-lg font-bold text-slate-800 dark:text-slate-100">0 Days</span>
+        </div>
+        <div class="p-3.5 rounded-xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-[11px] text-slate-500 block mb-1">Actual Work Hours</span>
+          <span id="dashTotalActual" class="text-lg font-bold text-slate-800 dark:text-slate-100">0h 0m</span>
+        </div>
+        <div class="p-3.5 rounded-xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-[11px] text-slate-500 block mb-1">Normal Duty Hours</span>
+          <span id="dashTotalNormal" class="text-lg font-bold text-slate-800 dark:text-slate-100">0h 0m</span>
+        </div>
+        <div class="p-3.5 rounded-xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-[11px] text-slate-500 block mb-1">Lunch Deducted</span>
+          <span id="dashTotalLunch" class="text-lg font-bold text-slate-800 dark:text-slate-100">0h 0m</span>
+        </div>
+      </div>
+
+      <!-- Monthly Attendance Log Table -->
+      <div class="p-4 rounded-2xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+        <h3 class="font-semibold text-sm mb-3 text-slate-900 dark:text-white">Attendance & Overtime Log</h3>
+
+        <div id="emptyLogMessage" class="hidden text-xs text-slate-500 text-center py-6">
+          No completed attendance records found for this month.
+        </div>
+
+        <div id="logTableContainer" class="overflow-x-auto -mx-4 px-4">
+          <table class="w-full text-left border-collapse min-w-[420px]">
+            <thead>
+              <tr class="text-[10px] uppercase border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                <th class="py-2 px-1">Date</th>
+                <th class="py-2 px-1">In - Out</th>
+                <th class="py-2 px-1">Over Duty</th>
+                <th class="py-2 px-1">Remark</th>
+                <th class="py-2 px-1 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceLogTbody" class="divide-y divide-slate-100 dark:divide-slate-700 text-xs text-slate-800 dark:text-slate-200">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: REPORTS & EXPORT -->
+    <div id="tab-reports" class="hidden space-y-4">
+      <div class="p-5 rounded-2xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <h2 class="font-semibold text-sm text-slate-900 dark:text-white">Export Monthly Report</h2>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          Download a clean CSV spreadsheet report suitable for workplace submission or payroll checking.
+        </p>
+
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">Target Month</label>
+          <input
+            type="month"
+            id="reportsMonthPicker"
+            class="w-full px-3 py-2 rounded-lg text-sm border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+          />
+        </div>
+
+        <button
+          onclick="handleExportCSV()"
+          class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          <span>Download CSV Report</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETTINGS & GOOGLE SHEETS -->
+    <div id="tab-settings" class="hidden space-y-4">
+      <div class="p-5 rounded-2xl border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          <h2 class="font-semibold text-sm text-slate-900 dark:text-white">Google Sheets Integration</h2>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Google Apps Script Web App URL</label>
+            <input
+              type="url"
+              id="scriptUrlInput"
+              placeholder="https://script.google.com/macros/s/.../exec"
+              oninput="saveSettingsFromInput()"
+              class="w-full px-3 py-2 rounded-lg text-xs font-mono border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-xs text-slate-600 dark:text-slate-300">Auto-sync changes to Google Sheets</span>
+            <input
+              type="checkbox"
+              id="autoSyncCheckbox"
+              onchange="saveSettingsFromInput()"
+              class="w-4 h-4 text-blue-600 rounded"
+            />
+          </div>
+
+          <div id="syncStatusNotice" class="hidden p-2.5 rounded-lg text-xs flex items-center gap-2 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+            <span id="syncStatusMsg">Syncing...</span>
+          </div>
+
+          <button
+            onclick="triggerGoogleSync(records, true)"
+            id="syncNowBtn"
+            class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            <span>Sync Now to Google Sheets</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- DELETE CONFIRMATION MODAL -->
+  <div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-sm p-5 rounded-2xl shadow-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white space-y-4">
+      <div class="flex items-center gap-3 text-rose-500">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <h3 class="font-bold text-sm">Delete Record</h3>
+      </div>
+      
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Are you sure you want to delete the attendance record for <strong id="deleteTargetDate" class="text-slate-700 dark:text-slate-200">--</strong>? This action cannot be undone.
+      </p>
+
+      <div class="flex items-center gap-2 pt-2">
+        <button
+          onclick="closeDeleteModal()"
+          class="w-1/2 py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onclick="confirmDeleteRecord()"
+          class="w-1/2 py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-colors"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT RECORD MODAL -->
+  <div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-sm p-5 rounded-2xl shadow-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+        <h3 class="font-bold text-sm">Edit Attendance Record</h3>
+        <button onclick="closeEditModal()" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">Date</label>
+          <input
+            type="date"
+            id="editDateInput"
+            class="w-full px-3 py-2 rounded-lg text-xs border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Punch In</label>
+            <input
+              type="time"
+              id="editInTimeInput"
+              class="w-full px-3 py-2 rounded-lg text-xs border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Punch Out</label>
+            <input
+              type="time"
+              id="editOutTimeInput"
+              class="w-full px-3 py-2 rounded-lg text-xs border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+            />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">Remark (optional)</label>
+          <textarea
+            id="editRemarkInput"
+            rows="2"
+            maxlength="500"
+            placeholder="Add or update the shift remark"
+            class="w-full px-3 py-2 rounded-lg text-xs border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2">
+        <button
+          onclick="closeEditModal()"
+          class="w-1/2 py-2 px-3 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700"
+        >
+          Cancel
+        </button>
+        <button
+          onclick="saveEditedRecord()"
+          class="w-1/2 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+        >
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERIFICATION SUITE MODAL -->
+  <div id="testModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md p-5 rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 text-slate-900 dark:text-white space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          <h3 class="font-bold text-sm">Rules Engine Verification</h3>
+        </div>
+        <button onclick="closeTestModal()" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">Automated tests verifying workplace rules for Cases A to E:</p>
+      <div id="testResultsContainer" class="space-y-2.5"></div>
+
+      <button
+        onclick="closeTestModal()"
+        class="w-full py-2.5 px-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold text-xs rounded-xl"
+      >
+        Close Verification Modal
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800 backdrop-blur-md">
+    <div class="max-w-md mx-auto grid grid-cols-4 px-2 py-1.5">
+      <button
+        onclick="switchTab('daily')"
+        id="nav-daily"
+        class="flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-bold text-blue-600 dark:text-blue-400 transition-colors"
+      >
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>Clock In</span>
+      </button>
+
+      <button
+        onclick="switchTab('dashboard')"
+        id="nav-dashboard"
+        class="flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-slate-500 transition-colors"
+      >
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <span>Dashboard</span>
+      </button>
+
+      <button
+        onclick="switchTab('reports')"
+        id="nav-reports"
+        class="flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-slate-500 transition-colors"
+      >
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        <span>Reports</span>
+      </button>
+
+      <button
+        onclick="switchTab('settings')"
+        id="nav-settings"
+        class="flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-slate-500 transition-colors"
+      >
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+        <span>Setup</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- APPLICATION ENGINE JAVASCRIPT -->
+  <script>
+    // DEFAULT RECLASSIFIED SAMPLE DATA
+    const DEFAULT_RECORDS = [
+      { id: 'rec-1', date: '2026-10-10', punchIn: '2026-10-10T10:00:00.000Z', punchOut: '2026-10-10T18:30:00.000Z', status: 'COMPLETED' },
+      { id: 'rec-2', date: '2026-10-11', punchIn: '2026-10-11T10:00:00.000Z', punchOut: '2026-10-11T19:00:00.000Z', status: 'COMPLETED' },
+      { id: 'rec-3', date: '2026-10-12', punchIn: '2026-10-12T10:00:00.000Z', punchOut: '2026-10-12T19:30:00.000Z', status: 'COMPLETED' }
+    ];
+
+    // STATE INITIALIZATION
+    let records = JSON.parse(localStorage.getItem('grs_records')) || DEFAULT_RECORDS;
+    let scriptUrl = localStorage.getItem('grs_script_url') || '';
+    let autoSync = localStorage.getItem('grs_autosync') === 'true';
+    let activeTab = 'daily';
+    let recordToDeleteId = null;
+    let recordToEditId = null;
+
+    // INITIALIZE TIMERS & UI
+    document.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      initMonthPickers();
+      startLiveClock();
+      refreshUI();
+
+      document.getElementById('scriptUrlInput').value = scriptUrl;
+      document.getElementById('autoSyncCheckbox').checked = autoSync;
+    });
+
+    // WORKPLACE RULES ENGINE (CALCULATIONS)
+    function calculateShiftDetails(punchInISO, punchOutISO) {
+      if (!punchInISO || !punchOutISO) {
+        return { elapsedMins: 0, lunchMins: 0, actualMins: 0, overDutyMins: 0 };
+      }
+
+      const start = new Date(punchInISO);
+      let end = new Date(punchOutISO);
+
+      if (end < start) {
+        end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+      }
+
+      const elapsedMins = Math.max(0, Math.round((end - start) / 60000));
+      const lunchMins = elapsedMins >= 510 ? 30 : 0;
+      const actualMins = Math.max(0, elapsedMins - lunchMins);
+      const overDutyMins = Math.max(0, actualMins - 480);
+
+      return { elapsedMins, lunchMins, actualMins, overDutyMins };
+    }
+
+    // HELPER UTILITIES
+    function formatMinsToHM(totalMins) {
+      if (isNaN(totalMins) || totalMins === null) return '0h 0m';
+      const hours = Math.floor(totalMins / 60);
+      const mins = Math.round(totalMins % 60);
+      return `${hours}h ${mins}m`;
+    }
+
+    function formatTimeTo12H(isoString) {
+      if (!isoString) return '--:--';
+      const d = new Date(isoString);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    function formatDateDisplay(dateString) {
+      if (!dateString) return '';
+      const [y, m, d] = dateString.split('-');
+      const dateObj = new Date(y, m - 1, d);
+      return dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function combineDateAndTime(dateStr, timeStr) {
+      if (!dateStr || !timeStr) return null;
+      return new Date(`${dateStr}T${timeStr}:00`).toISOString();
+    }
+
+    function extractDateAndTime(isoStr) {
+      if (!isoStr) return { date: '', time: '' };
+      const d = new Date(isoStr);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return { date: `${year}-${month}-${day}`, time: `${hours}:${mins}` };
+    }
+
+    // SAVE STATE TO LOCAL STORAGE
+    function saveState() {
+      localStorage.setItem('grs_records', JSON.stringify(records));
+      localStorage.setItem('grs_script_url', scriptUrl);
+      localStorage.setItem('grs_autosync', String(autoSync));
+
+      if (autoSync && scriptUrl) {
+        triggerGoogleSync(records, false);
+      }
+    }
+
+    // THEME HANDLING
+    function initTheme() {
+      const savedTheme = localStorage.getItem('grs_theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.getElementById('themeIconSun').classList.remove('hidden');
+        document.getElementById('themeIconMoon').classList.add('hidden');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('themeIconSun').classList.add('hidden');
+        document.getElementById('themeIconMoon').classList.remove('hidden');
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('grs_theme', isDark ? 'dark' : 'light');
+      initTheme();
+    }
+
+    // CLOCK & TAB NAVIGATION
+    function startLiveClock() {
+      const update = () => {
+        const now = new Date();
+        document.getElementById('liveClockTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById('liveClockDate').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+      };
+      update();
+      setInterval(update, 1000);
+    }
+
+    function initMonthPickers() {
+      const now = new Date();
+      const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      document.getElementById('dashboardMonthPicker').value = currentMonthStr;
+      document.getElementById('reportsMonthPicker').value = currentMonthStr;
+    }
+
+    function switchTab(tabId) {
+      activeTab = tabId;
+      ['daily', 'dashboard', 'reports', 'settings'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        navBtn.className = "flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-slate-500 transition-colors";
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      activeNav.className = "flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-bold text-blue-600 dark:text-blue-400 transition-colors";
+
+      if (tabId === 'dashboard') renderDashboardView();
+    }
+
+    // PUNCH CLOCK ACTIONS
+    function handlePunchIn() {
+      const activeShift = records.find(r => r.status === 'IN_PROGRESS');
+      if (activeShift) {
+        alert('An unfinished shift is already in progress!');
+        return;
+      }
+
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+
+      records.unshift({
+        id: `rec-${Date.now()}`,
+        date: dateStr,
+        punchIn: now.toISOString(),
+        punchOut: null,
+        status: 'IN_PROGRESS'
+      });
+
+      saveState();
+      refreshUI();
+    }
+
+    function handlePunchOut() {
+      const activeShift = records.find(r => r.status === 'IN_PROGRESS');
+      if (!activeShift) {
+        alert('No active shift found to punch out.');
+        return;
+      }
+
+      const now = new Date();
+      records = records.map(r => {
+        if (r.id === activeShift.id) {
+          return { ...r, punchOut: now.toISOString(), status: 'COMPLETED' };
+        }
+        return r;
+      });
+
+      saveState();
+      refreshUI();
+    }
+
+    // MANUAL SHIFT ENTRY
+    function updateManualPreview() {
+      const date = document.getElementById('manualDate').value;
+      const inTime = document.getElementById('manualInTime').value;
+      const outTime = document.getElementById('manualOutTime').value;
+      const saveBtn = document.getElementById('saveManualBtn');
+      const prevContainer = document.getElementById('manualPreviewContainer');
+
+      if (date && inTime && outTime) {
+        saveBtn.disabled = false;
+        prevContainer.classList.remove('hidden');
+
+        const inISO = combineDateAndTime(date, inTime);
+        let outISO = combineDateAndTime(date, outTime);
+
+        if (new Date(outISO) < new Date(inISO)) {
+          const nextDay = new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          outISO = combineDateAndTime(nextDay, outTime);
+        }
+
+        const calc = calculateShiftDetails(inISO, outISO);
+        document.getElementById('prevElapsed').textContent = formatMinsToHM(calc.elapsedMins);
+        document.getElementById('prevLunch').textContent = `${calc.lunchMins}m`;
+        document.getElementById('prevOverDuty').textContent = formatMinsToHM(calc.overDutyMins);
+      } else {
+        saveBtn.disabled = true;
+        prevContainer.classList.add('hidden');
+      }
+    }
+
+    function clearManualForm() {
+      document.getElementById('manualDate').value = '';
+      document.getElementById('manualInTime').value = '';
+      document.getElementById('manualOutTime').value = '';
+      document.getElementById('manualRemark').value = '';
+      updateManualPreview();
+    }
+
+    function handleSaveManualEntry(e) {
+      e.preventDefault();
+      const date = document.getElementById('manualDate').value;
+      const inTime = document.getElementById('manualInTime').value;
+      const outTime = document.getElementById('manualOutTime').value;
+      const remark = document.getElementById('manualRemark').value.trim();
+
+      if (!date || !inTime || !outTime) return;
+
+      const punchInISO = combineDateAndTime(date, inTime);
+      let punchOutISO = combineDateAndTime(date, outTime);
+
+      if (new Date(punchOutISO) < new Date(punchInISO)) {
+        const nextDay = new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        punchOutISO = combineDateAndTime(nextDay, outTime);
+      }
+
+      records.unshift({
+        id: `rec-${Date.now()}`,
+        date: date,
+        punchIn: punchInISO,
+        punchOut: punchOutISO,
+        remark: remark,
+        status: 'COMPLETED'
+      });
+
+      saveState();
+      clearManualForm();
+      refreshUI();
+      alert('Attendance record saved successfully!');
+    }
+
+    // Safely display user-entered remarks as plain text.
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    // DASHBOARD & LOG TABLE RENDERING
+    function renderDashboardView() {
+      const selectedMonth = document.getElementById('dashboardMonthPicker').value;
+      const completedShifts = records.filter(r => r.status === 'COMPLETED' && r.date && r.date.startsWith(selectedMonth));
+
+      let totalElapsed = 0, totalLunch = 0, totalActual = 0, totalOverDuty = 0;
+
+      const formattedLog = completedShifts.map(r => {
+        const calc = calculateShiftDetails(r.punchIn, r.punchOut);
+        totalElapsed += calc.elapsedMins;
+        totalLunch += calc.lunchMins;
+        totalActual += calc.actualMins;
+        totalOverDuty += calc.overDutyMins;
+        return { ...r, calc };
+      }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const totalDays = completedShifts.length;
+      const normalDuty = totalDays * 480;
+
+      document.getElementById('dashTotalOverDuty').textContent = formatMinsToHM(totalOverDuty);
+      document.getElementById('dashBannerSubtitle').textContent = `Accumulated overtime beyond 8 hours/day for ${totalDays} completed shift(s).`;
+      document.getElementById('dashTotalDays').textContent = `${totalDays} Days`;
+      document.getElementById('dashTotalActual').textContent = formatMinsToHM(totalActual);
+      document.getElementById('dashTotalNormal').textContent = formatMinsToHM(normalDuty);
+      document.getElementById('dashTotalLunch').textContent = formatMinsToHM(totalLunch);
+
+      const tbody = document.getElementById('attendanceLogTbody');
+      const emptyMsg = document.getElementById('emptyLogMessage');
+      const tableContainer = document.getElementById('logTableContainer');
+
+      tbody.innerHTML = '';
+
+      if (formattedLog.length === 0) {
+        emptyMsg.classList.remove('hidden');
+        tableContainer.classList.add('hidden');
+      } else {
+        emptyMsg.classList.add('hidden');
+        tableContainer.classList.remove('hidden');
+
+        formattedLog.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50/50 dark:hover:bg-slate-700/30';
+          tr.innerHTML = `
+            <td class="py-2.5 px-1 font-medium">${formatDateDisplay(r.date)}</td>
+            <td class="py-2.5 px-1 text-slate-500 dark:text-slate-400 whitespace-nowrap">${formatTimeTo12H(r.punchIn)} - ${formatTimeTo12H(r.punchOut)}</td>
+            <td class="py-2.5 px-1 font-bold text-blue-600 dark:text-blue-400">${formatMinsToHM(r.calc.overDutyMins)}</td>
+            <td class="py-2.5 px-1 whitespace-normal min-w-[140px]">${escapeHTML(r.remark || '—')}</td>
+            <td class="py-2.5 px-1 text-right space-x-1">
+              <button onclick="openEditModal('${r.id}')" class="p-1 text-slate-500 hover:text-blue-600 rounded">✎</button>
+              <button onclick="promptDeleteRecord('${r.id}')" class="p-1 text-slate-500 hover:text-rose-600 rounded">🗑</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    function refreshUI() {
+      const activeShift = records.find(r => r.status === 'IN_PROGRESS');
+      const inBtn = document.getElementById('punchInBtn');
+      const outBtn = document.getElementById('punchOutBtn');
+      const badge = document.getElementById('shiftStatusBadge');
+      const notice = document.getElementById('activeShiftNotice');
+
+      if (activeShift) {
+        inBtn.disabled = true;
+        inBtn.className = "py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-slate-100 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 cursor-not-allowed";
+
+        outBtn.disabled = false;
+        outBtn.className = "py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 active:scale-95";
+
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-pulse";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span>Shift In Progress`;
+
+        notice.classList.remove('hidden');
+        document.getElementById('activeShiftStartedText').textContent = `${formatDateDisplay(activeShift.date)} at ${formatTimeTo12H(activeShift.punchIn)}`;
+      } else {
+        inBtn.disabled = false;
+        inBtn.className = "py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 active:scale-95";
+
+        outBtn.disabled = true;
+        outBtn.className = "py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-slate-100 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 cursor-not-allowed";
+
+        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300";
+        badge.textContent = "Off Duty";
+
+        notice.classList.add('hidden');
+      }
+
+      if (activeTab === 'dashboard') renderDashboardView();
+    }
+
+    // RECORD EDIT & DELETE MODALS
+    function promptDeleteRecord(id) {
+      const target = records.find(r => r.id === id);
+      if (!target) return;
+      recordToDeleteId = id;
+      document.getElementById('deleteTargetDate').textContent = formatDateDisplay(target.date);
+      document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      recordToDeleteId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    function confirmDeleteRecord() {
+      if (!recordToDeleteId) return;
+      records = records.filter(r => r.id !== recordToDeleteId);
+      saveState();
+      closeDeleteModal();
+      refreshUI();
+    }
+
+    function openEditModal(id) {
+      const target = records.find(r => r.id === id);
+      if (!target) return;
+      recordToEditId = id;
+
+      const inParts = extractDateAndTime(target.punchIn);
+      const outParts = extractDateAndTime(target.punchOut || target.punchIn);
+
+      document.getElementById('editDateInput').value = target.date;
+      document.getElementById('editInTimeInput').value = inParts.time;
+      document.getElementById('editOutTimeInput').value = outParts.time;
+      document.getElementById('editRemarkInput').value = target.remark || '';
+
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      recordToEditId = null;
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    function saveEditedRecord() {
+      if (!recordToEditId) return;
+      const date = document.getElementById('editDateInput').value;
+      const inTime = document.getElementById('editInTimeInput').value;
+      const outTime = document.getElementById('editOutTimeInput').value;
+      const remark = document.getElementById('editRemarkInput').value.trim();
+
+      if (!date || !inTime || !outTime) {
+        alert('All fields are required.');
+        return;
+      }
+
+      const punchInISO = combineDateAndTime(date, inTime);
+      let punchOutISO = combineDateAndTime(date, outTime);
+
+      if (new Date(punchOutISO) < new Date(punchInISO)) {
+        const nextDay = new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        punchOutISO = combineDateAndTime(nextDay, outTime);
+      }
+
+      records = records.map(r => {
+        if (r.id === recordToEditId) {
+          return { ...r, date: date, punchIn: punchInISO, punchOut: punchOutISO, remark: remark, status: 'COMPLETED' };
+        }
+        return r;
+      });
+
+      saveState();
+      closeEditModal();
+      refreshUI();
+    }
+
+    // CSV EXPORT FUNCTIONALITY
+    function handleExportCSV() {
+      const selectedMonth = document.getElementById('reportsMonthPicker').value;
+      const completedShifts = records.filter(r => r.status === 'COMPLETED' && r.date && r.date.startsWith(selectedMonth));
+
+      if (completedShifts.length === 0) {
+        alert('No completed attendance records found for the selected month.');
+        return;
+      }
+
+      let csv = 'GRS OD Tracker - Attendance Report\n';
+      csv += `Selected Month: ${selectedMonth}\n\n`;
+      csv += 'Date,Punch In,Punch Out,Elapsed Time,Lunch Deduction,Actual Working Hours,Normal Duty,Daily Over Duty,Remark\n';
+
+      let totalActual = 0, totalLunch = 0, totalOverDuty = 0;
+
+      completedShifts.forEach(r => {
+        const calc = calculateShiftDetails(r.punchIn, r.punchOut);
+        totalActual += calc.actualMins;
+        totalLunch += calc.lunchMins;
+        totalOverDuty += calc.overDutyMins;
+
+        const csvRemark = String(r.remark || '').replace(/"/g, '""');
+        csv += `"${r.date}","${formatTimeTo12H(r.punchIn)}","${formatTimeTo12H(r.punchOut)}","${formatMinsToHM(calc.elapsedMins)}","${calc.lunchMins}m","${formatMinsToHM(calc.actualMins)}","8h 0m","${formatMinsToHM(calc.overDutyMins)}","${csvRemark}"\n`;
+      });
+
+      csv += `\nSUMMARY TOTALS\n`;
+      csv += `Total Days,${completedShifts.length}\n`;
+      csv += `Total Actual Work Hours,${formatMinsToHM(totalActual)}\n`;
+      csv += `Total Normal Duty Hours,${formatMinsToHM(completedShifts.length * 480)}\n`;
+      csv += `Total Lunch Deducted,${formatMinsToHM(totalLunch)}\n`;
+      csv += `TOTAL MONTHLY OVER DUTY,${formatMinsToHM(totalOverDuty)}\n`;
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `GRS_Overtime_Report_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // GOOGLE SHEETS SETTINGS & REST SYNC
+    function saveSettingsFromInput() {
+      scriptUrl = document.getElementById('scriptUrlInput').value;
+      autoSync = document.getElementById('autoSyncCheckbox').checked;
+      saveState();
+    }
+
+    async function triggerGoogleSync(recordsToSync = records, showAlert = true) {
+      if (!scriptUrl) {
+        if (showAlert) alert('Please provide a valid Google Apps Script Web App URL in Setup.');
+        return;
+      }
+
+      const notice = document.getElementById('syncStatusNotice');
+      const msg = document.getElementById('syncStatusMsg');
+      notice.classList.remove('hidden');
+      msg.textContent = 'Syncing with Google Sheets...';
+
+      const payloadData = recordsToSync.map(r => {
+        const calc = calculateShiftDetails(r.punchIn, r.punchOut);
+        return {
+          id: r.id,
+          date: r.date,
+          punchIn: r.punchIn,
+          punchOut: r.punchOut || '',
+          elapsedMins: calc.elapsedMins,
+          lunchMins: calc.lunchMins,
+          actualMins: calc.actualMins,
+          overDutyMins: calc.overDutyMins,
+          remark: r.remark || '',
+          status: r.status
+        };
+      });
+
+      try {
+        await fetch(scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'syncAll', records: payloadData })
+        });
+
+        msg.textContent = 'Synced successfully with Google Sheets!';
+        if (showAlert) alert('Successfully synchronized with Google Sheets spreadsheet!');
+      } catch (err) {
+        console.error('Sync Error:', err);
+        msg.textContent = 'Sync failed. Please check network or Apps Script URL.';
+      }
+    }
+
+    // AUTOMATED TEST SUITE (VERIFY CASES A-E)
+    function runVerificationSuite() {
+      const cases = [
+        { id: 'Case A', label: '10:00 AM to 6:30 PM (8h 30m)', punchIn: '2026-10-20T10:00:00', punchOut: '2026-10-20T18:30:00', expLunch: 30, expActual: 480, expOvertime: 0 },
+        { id: 'Case B', label: '10:00 AM to 7:00 PM (9h)', punchIn: '2026-10-20T10:00:00', punchOut: '2026-10-20T19:00:00', expLunch: 30, expActual: 510, expOvertime: 30 },
+        { id: 'Case C', label: '10:00 AM to 7:30 PM (9h 30m)', punchIn: '2026-10-20T10:00:00', punchOut: '2026-10-20T19:30:00', expLunch: 30, expActual: 540, expOvertime: 60 },
+        { id: 'Case D', label: '10:00 AM to 5:00 PM (7h)', punchIn: '2026-10-20T10:00:00', punchOut: '2026-10-20T17:00:00', expLunch: 0, expActual: 420, expOvertime: 0 },
+        { id: 'Case E', label: 'Night Shift: 10:00 PM to 7:00 AM', punchIn: '2026-10-20T22:00:00', punchOut: '2026-10-21T07:00:00', expLunch: 30, expActual: 510, expOvertime: 30 }
+      ];
+
+      const container = document.getElementById('testResultsContainer');
+      container.innerHTML = '';
+
+      cases.forEach(c => {
+        const calc = calculateShiftDetails(c.punchIn, c.punchOut);
+        const passed = calc.lunchMins === c.expLunch && calc.actualMins === c.expActual && calc.overDutyMins === c.expOvertime;
+
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-xl border text-xs space-y-1 ${passed ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800' : 'bg-rose-50/50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-800'}`;
+        div.innerHTML = `
+          <div class="flex items-center justify-between font-bold">
+            <span>${c.id}: ${c.label}</span>
+            <span class="${passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}">${passed ? '✓ PASSED' : '✕ FAILED'}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1 text-[11px] text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+            <div>Lunch: <strong>${calc.lunchMins}m</strong></div>
+            <div>Actual: <strong>${formatMinsToHM(calc.actualMins)}</strong></div>
+            <div>Overtime: <strong class="text-blue-600 dark:text-blue-400">${formatMinsToHM(calc.overDutyMins)}</strong></div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('testModal').classList.remove('hidden');
+    }
+
+    function closeTestModal() {
+      document.getElementById('testModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
+```
+
+### How to Use This HTML File:
+1. Save the file locally on your computer or phone as `index.html`.
+2. Open it directly in Chrome, Firefox, Safari, or Samsung Internet.
+3. You can also upload it to GitHub Pages or Netlify Drop to get a live URL and install it on your mobile home screen.
